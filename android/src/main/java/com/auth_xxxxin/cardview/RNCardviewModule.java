@@ -106,107 +106,146 @@ import honeywell.printer.configuration.ez.VersionInformation;
 
 public class RNCardviewModule extends ReactContextBaseJavaModule {
 
-  private final ReactApplicationContext reactContext;
-  private ConnectionBase conn;
-  DocumentDPL docDPL = new DocumentDPL();
-  int bytesWritten = 0;
-  int bytesToWrite = 1024;
-  ParametersDPL paramDPL= new ParametersDPL();
+    private final ReactApplicationContext reactContext;
+    private ConnectionBase conn;
+    DocumentDPL docDPL = new DocumentDPL();
+    int bytesWritten = 0;
+    int bytesToWrite = 1024;
+    ParametersDPL paramDPL= new ParametersDPL();
+    byte[] printData = {0};
 
-  public RNCardviewModule(ReactApplicationContext reactContext) {
-    super(reactContext);
-    this.reactContext = reactContext;
-  }
+    public RNCardviewModule(ReactApplicationContext reactContext) {
+        super(reactContext);
+        this.reactContext = reactContext;
+    }
 
-  @ReactMethod
-  public void connectBlue(String uuid){
-      try{
-          conn = Connection_Bluetooth.createClient(uuid);
-          if(!conn.getIsOpen()){
-              conn.open(); 
-              Activity currentActivity = getCurrentActivity();
-              Toast.makeText(currentActivity, "蓝牙连接成功", Toast.LENGTH_LONG).show();
-          }
-      } catch(Exception e){
-          // System.out.println("Wrong!");//
-          Activity currentActivity = getCurrentActivity();
-          Toast.makeText(currentActivity, "蓝牙失败"+e, Toast.LENGTH_LONG).show();
-      }
-  }
+    @ReactMethod
+    public void connectBlue(String uuid) {
+        try {
+            conn = Connection_Bluetooth.createClient(uuid);
+            if(!conn.getIsOpen()){
+                conn.open(); 
+                Activity currentActivity = getCurrentActivity();
+                Toast.makeText(currentActivity, "Connected printer", Toast.LENGTH_LONG).show();
+            }
+        } catch(Exception e){
+            // System.out.println("Wrong!");//
+            Activity currentActivity = getCurrentActivity();
+            Toast.makeText(currentActivity, "Printer connection error " + e, Toast.LENGTH_LONG).show();
+        }
+    }
 
-  @ReactMethod
-  public void printText(String text,String fontID,int row,int col,int fontHeight,int fontWidth){
-      try{
-          try{
-              docDPL.setEnableAdvanceFormatAttribute(true); //启用文本格式(例如。粗体、斜体、下划线)
-              paramDPL.setIsUnicode(true);
-              paramDPL.setDBSymbolSet(DoubleByteSymbolSet.Unicode);
+    @ReactMethod
+    public void printText(String text, String fontID, int row, int col, int fontHeight, int fontWidth) {
+        try {
+            try {
+                docDPL.setEnableAdvanceFormatAttribute(true); //启用文本格式(例如。粗体、斜体、下划线)
+                paramDPL.setIsUnicode(true);
+                paramDPL.setDBSymbolSet(DoubleByteSymbolSet.Unicode);
 
-              paramDPL.setFontHeight(fontHeight);
-              paramDPL.setFontWidth(fontWidth);
+                paramDPL.setFontHeight(fontHeight);
+                paramDPL.setFontWidth(fontWidth);
 
-              paramDPL.setIsBold(false);
-              paramDPL.setIsItalic(false);
-              paramDPL.setIsUnderline(false);
-              docDPL.writeTextScalable(text, fontID, row, col, paramDPL);
-          }catch (Exception e) {
-              Activity currentActivity = getCurrentActivity();
-              Toast.makeText(currentActivity, "失败"+e, Toast.LENGTH_LONG).show();
-          } 
-      }catch (Exception e) {
-          Activity currentActivity = getCurrentActivity();
-          Toast.makeText(currentActivity, "失败"+e, Toast.LENGTH_LONG).show();
-      }
-  }
+                paramDPL.setIsBold(false);
+                paramDPL.setIsItalic(false);
+                paramDPL.setIsUnderline(false);
+                docDPL.writeTextScalable(text, fontID, row, col, paramDPL);
+                printData = docDPL.getDocumentData();
+            } catch (Exception e) {
+                Activity currentActivity = getCurrentActivity();
+                Toast.makeText(currentActivity, "Printer printLine error " + e, Toast.LENGTH_LONG).show();
+            } 
+        } catch (Exception e) {
+            Activity currentActivity = getCurrentActivity();
+            Toast.makeText(currentActivity, "Printer printLine error " + e, Toast.LENGTH_LONG).show();
+        }
+    }
 
-  //二维码
-  @ReactMethod
-  public void qrCode(String text,String fontID,int row,int col){
-      try{
-          try{
-              paramDPL.setIsUnicode(false);
-              paramDPL.setWideBarWidth(4);
-              paramDPL.setNarrowBarWidth(4);
-              paramDPL.setSymbolHeight(0);
-              //AutoFormatting
-              docDPL.writeBarCodeQRCode(text, true, 0, "", "", "", "", row, col, paramDPL);
-              // docDPL.writeTextInternalBitmapped("QR Barcode w/ Auto Formatting", 1, 1030, 0);
-             
-          }catch (Exception e) {
-              Activity currentActivity = getCurrentActivity();
-              Toast.makeText(currentActivity, "打印二维码失败"+e, Toast.LENGTH_LONG).show();
-          } 
-      }catch (Exception e) {
-          Activity currentActivity = getCurrentActivity();
-          Toast.makeText(currentActivity, "打印二维码失败"+e, Toast.LENGTH_LONG).show();
-      }
-  }
+    @ReactMethod
+    public void qrCode(String text, String fontID, int row, int col) {
+        try{
+            try{
+                paramDPL.setIsUnicode(false);
+                paramDPL.setWideBarWidth(4);
+                paramDPL.setNarrowBarWidth(4);
+                paramDPL.setSymbolHeight(0);
+                //AutoFormatting
+                docDPL.writeBarCodeQRCode(text, true, 0, "", "", "", "", row, col, paramDPL);
+                // docDPL.writeTextInternalBitmapped("QR Barcode w/ Auto Formatting", 1, 1030, 0);
+                printData = docDPL.getDocumentData();
+            } catch (Exception e) {
+                Activity currentActivity = getCurrentActivity();
+                Toast.makeText(currentActivity, "Printer qrCode error "+e, Toast.LENGTH_LONG).show();
+            } 
+        } catch (Exception e) {
+            Activity currentActivity = getCurrentActivity();
+            Toast.makeText(currentActivity, "Printer qrCode error "+e, Toast.LENGTH_LONG).show();
+        }
+    }
 
-  //线
-  @ReactMethod
-  public void printLine(int row,int col,int height,int width){
-      try{
-          try{
-            //writeLine
-            docDPL.writeLine(row, col, height, width);
-          }catch (Exception e) {
-              Activity currentActivity = getCurrentActivity();
-              Toast.makeText(currentActivity, "打印Line失败"+e, Toast.LENGTH_LONG).show();
-          } 
-      }catch (Exception e) {
-          Activity currentActivity = getCurrentActivity();
-          Toast.makeText(currentActivity, "打印Line失败"+e, Toast.LENGTH_LONG).show();
-      }
-  }
+    @ReactMethod
+    public void printLine(int row, int col, int height, int width) {
+        try {
+            try {
+                //writeLine
+                docDPL.writeLine(row, col, height, width);
+                printData = docDPL.getDocumentData();
+            } catch (Exception e) {
+                Activity currentActivity = getCurrentActivity();
+                Toast.makeText(currentActivity, "Printer printLine error " + e, Toast.LENGTH_LONG).show();
+            } 
+        } catch (Exception e) {
+            Activity currentActivity = getCurrentActivity();
+            Toast.makeText(currentActivity, "Printer printLine error " + e, Toast.LENGTH_LONG).show();
+        }
+    }
 
-  @ReactMethod
-    //清理dpl打印
+    @ReactMethod
+    public void print() {
+        try {
+            if(conn.getIsOpen()) {
+                int bytesWritten = 0;
+                int bytesToWrite = 1024;
+                int totalBytes = printData.length;
+                int remainingBytes = totalBytes;
+                while (bytesWritten < totalBytes) {
+                    if (remainingBytes < bytesToWrite)
+                        bytesToWrite = remainingBytes;
+
+                    //Send data, 1024 bytes at a time until all data sent
+                    conn.write(printData, bytesWritten, bytesToWrite);
+                    bytesWritten += bytesToWrite;
+                    remainingBytes = remainingBytes - bytesToWrite;
+                    Thread.sleep(100);
+                }
+            }
+        } catch (Exception e) {
+            Activity currentActivity = getCurrentActivity();
+            Toast.makeText(currentActivity, "Printer print error " + e, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @ReactMethod
     public void clearDPL(){
         docDPL.clear();
     }
 
-  @Override
-  public String getName() {
-    return "RNCardview";
-  }
+    @ReactMethod
+    public void closeBlue(String uuid) {
+        try {
+            if(conn.getIsOpen()){
+                conn.close();
+                Activity currentActivity = getCurrentActivity();
+                Toast.makeText(currentActivity, "Disconnected printer", Toast.LENGTH_LONG).show();
+            }
+        } catch(Exception e){
+            Activity currentActivity = getCurrentActivity();
+            Toast.makeText(currentActivity, "Disconnected printer error " + e, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public String getName() {
+        return "RNCardview";
+    }
 }
