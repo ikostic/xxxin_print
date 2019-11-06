@@ -9,7 +9,7 @@ import com.facebook.react.bridge.Callback;
 import android.app.Activity;
 
 import android.content.DialogInterface;
-import android.support.v7.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.util.Log;
 import android.util.Base64;
 import android.widget.ArrayAdapter;
@@ -124,8 +124,20 @@ public class RNCardviewModule extends ReactContextBaseJavaModule {
         try {
             conn = Connection_Bluetooth.createClient(uuid);
             if(!conn.getIsOpen()){
-                conn.open(); 
+                conn.open();
+                PrintSettings_DPL printSettings = new PrintSettings_DPL(conn);
+                MediaLabel_DPL mediaLabel = new MediaLabel_DPL(conn);
+                mediaLabel.setLabelWidth(412);
+                mediaLabel.setContinuousLabelLength(600);
+                mediaLabel.setMaxLabelLength(1000);
+                mediaLabel.setPaperEmptyDistance(25);
+                SystemSettings_DPL sysSettings = new SystemSettings_DPL(conn);
+                sysSettings.setLabelRotation(SystemSettings_DPL.LabelRotationValue.Rotate_180);
+                //sysSettings.update(1000);
+                //sysSettings.queryPrinter(1000);
                 Activity currentActivity = getCurrentActivity();
+                //Toast.makeText(currentActivity, "Connected printer " + printSettings.getColumnOffset(), Toast.LENGTH_LONG).show();
+                //Toast.makeText(currentActivity, "Connected printer " + sysSettings.getLabelRotation().name(), Toast.LENGTH_LONG).show();
                 Toast.makeText(currentActivity, "Connected printer", Toast.LENGTH_LONG).show();
             }
         } catch(Exception e){
@@ -136,10 +148,10 @@ public class RNCardviewModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void printText(String text, String fontID, int row, int col, int fontHeight, int fontWidth) {
+    public void printText(String text, int fontID, int row, int col, int fontHeight, int fontWidth) {
         try {
             try {
-                docDPL.setEnableAdvanceFormatAttribute(true); //启用文本格式(例如。粗体、斜体、下划线)
+                docDPL.setEnableAdvanceFormatAttribute(true);
                 paramDPL.setIsUnicode(true);
                 paramDPL.setDBSymbolSet(DoubleByteSymbolSet.Unicode);
 
@@ -149,7 +161,14 @@ public class RNCardviewModule extends ReactContextBaseJavaModule {
                 paramDPL.setIsBold(false);
                 paramDPL.setIsItalic(false);
                 paramDPL.setIsUnderline(false);
-                docDPL.writeTextScalable(text, fontID, row, col, paramDPL);
+
+                //paramDPL.setIsMirrored(true);
+
+                //paramDPL.setRotate(ParametersDPL.Rotation.Rotate_180);
+
+                //docDPL.writeTextScalable(text, fontID, row, col, paramDPL);
+                //docDPL.writeText(text, row, col, fontID, paramDPL);
+                docDPL.writeTextInternalBitmapped(text, fontID, row, col, paramDPL);
                 printData = docDPL.getDocumentData();
             } catch (Exception e) {
                 Activity currentActivity = getCurrentActivity();
@@ -171,6 +190,28 @@ public class RNCardviewModule extends ReactContextBaseJavaModule {
                 paramDPL.setSymbolHeight(0);
                 //AutoFormatting
                 docDPL.writeBarCodeQRCode(text, true, 0, "", "", "", "", row, col, paramDPL);
+                // docDPL.writeTextInternalBitmapped("QR Barcode w/ Auto Formatting", 1, 1030, 0);
+                printData = docDPL.getDocumentData();
+            } catch (Exception e) {
+                Activity currentActivity = getCurrentActivity();
+                Toast.makeText(currentActivity, "Printer qrCode error "+e, Toast.LENGTH_LONG).show();
+            } 
+        } catch (Exception e) {
+            Activity currentActivity = getCurrentActivity();
+            Toast.makeText(currentActivity, "Printer qrCode error "+e, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @ReactMethod
+    public void barCode(String barcodeID, String text, int row, int col) {
+        try{
+            try{
+                paramDPL.setIsUnicode(false);
+                paramDPL.setWideBarWidth(3);
+                paramDPL.setNarrowBarWidth(1);
+                paramDPL.setSymbolHeight(8);
+                //AutoFormatting
+                docDPL.writeBarCode(barcodeID, text, row, col);
                 // docDPL.writeTextInternalBitmapped("QR Barcode w/ Auto Formatting", 1, 1030, 0);
                 printData = docDPL.getDocumentData();
             } catch (Exception e) {
